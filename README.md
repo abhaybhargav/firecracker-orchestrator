@@ -47,7 +47,12 @@ A minimal orchestration system built in Go that deploys Docker containers inside
 2. **Build the application**
    ```bash
    go mod download
-   go build -o bin/orchestrator ./cmd/orchestrator
+   
+   # For development (with CGO)
+   make build
+   
+   # For deployment (pure Go, no CGO required)
+   make build-linux-static
    ```
 
 3. **Install Firecracker**

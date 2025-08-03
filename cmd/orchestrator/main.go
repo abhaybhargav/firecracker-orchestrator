@@ -30,7 +30,16 @@ func main() {
 	logger.Info("Starting Firecracker Orchestrator")
 
 	// Initialize database
-	db, err := database.NewDatabase(cfg.DatabasePath)
+	var db *database.Database
+
+	if cfg.DatabaseDriver == "sqlite3" {
+		// Use CGO-based SQLite driver (faster but requires CGO)
+		db, err = database.NewDatabase(cfg.DatabasePath)
+	} else {
+		// Use pure Go SQLite driver (slower but no CGO required)
+		db, err = database.NewPureGoDatabase(cfg.DatabasePath)
+	}
+
 	if err != nil {
 		logger.Fatalf("Failed to initialize database: %v", err)
 	}

@@ -13,7 +13,8 @@ type Config struct {
 	Port int
 
 	// Database configuration
-	DatabasePath string
+	DatabasePath   string
+	DatabaseDriver string // "sqlite3" (CGO) or "sqlite" (pure Go)
 
 	// Firecracker configuration
 	FirecrackerBinary string
@@ -40,6 +41,7 @@ func LoadConfig() *Config {
 		Host:              getEnv("HOST", "0.0.0.0"),
 		Port:              getEnvAsInt("PORT", 8080),
 		DatabasePath:      getEnv("DATABASE_PATH", "./orchestrator.db"),
+		DatabaseDriver:    getEnv("DATABASE_DRIVER", "sqlite"), // Default to pure Go
 		FirecrackerBinary: getEnv("FIRECRACKER_BINARY", "/usr/bin/firecracker"),
 		KernelPath:        getEnv("KERNEL_PATH", "./vm-images/vmlinux.bin"),
 		RootfsPath:        getEnv("ROOTFS_PATH", "./vm-images/rootfs.ext4"),
