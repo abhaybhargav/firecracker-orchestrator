@@ -1,0 +1,41 @@
+[Unit]
+Description=Firecracker Orchestrator
+Documentation=https://github.com/abhaybhargav/firecracker-orchestrator
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=firecracker
+Group=firecracker
+WorkingDirectory=/opt/firecracker-orchestrator
+ExecStart=/opt/firecracker-orchestrator/bin/orchestrator
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=always
+RestartSec=5
+KillMode=mixed
+KillSignal=SIGTERM
+TimeoutStopSec=30
+
+# Environment variables
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+Environment=LOG_LEVEL=info
+Environment=HOST=0.0.0.0
+Environment=PORT=8080
+Environment=DATABASE_PATH=/opt/firecracker-orchestrator/data/orchestrator.db
+Environment=SOCKET_DIR=/tmp/firecracker
+Environment=FIRECRACKER_BINARY=/usr/bin/firecracker
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/firecracker-orchestrator/data /tmp/firecracker
+
+# Resource limits
+LimitNOFILE=65536
+LimitNPROC=32768
+
+[Install]
+WantedBy=multi-user.target

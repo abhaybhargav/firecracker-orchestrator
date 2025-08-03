@@ -1,0 +1,217 @@
+{{define "content"}}
+<div x-data="vmsPage()" x-init="init()">
+    <!-- Page Header -->
+    <div class="px-4 py-6 sm:px-0">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-2xl font-bold text-gray-900">Virtual Machines</h2>
+            <a href="/vms/new" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-orange-600 hover:bg-orange-700">
+                <i class="fas fa-plus mr-2"></i>
+                Create VM
+            </a>
+        </div>
+
+        <!-- VMs List -->
+        <div class="bg-white shadow overflow-hidden sm:rounded-md">
+            <div x-show="loading" class="text-center py-12">
+                <i class="fas fa-spinner fa-spin text-gray-400 text-2xl mb-4"></i>
+                <p class="text-gray-500">Loading VMs...</p>
+            </div>
+            
+            <ul x-show="!loading && vms.length > 0" class="divide-y divide-gray-200">
+                <template x-for="vm in vms" :key="vm.id">
+                    <li>
+                        <div class="px-4 py-4">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0 h-12 w-12">
+                                        <div class="h-12 w-12 rounded-lg bg-gray-100 flex items-center justify-center">
+                                            <i class="fas fa-server text-gray-600 text-xl"></i>
+                                        </div>
+                                    </div>
+                                    <div class="ml-4">
+                                        <div class="flex items-center">
+                                            <p class="text-lg font-medium text-gray-900" x-text="vm.name"></p>
+                                            <span :class="getStatusClass(vm.status)" class="ml-2 px-2 inline-flex text-xs leading-5 font-semibold rounded-full" x-text="vm.status"></span>
+                                        </div>
+                                        <div class="flex items-center text-sm text-gray-500 space-x-4">
+                                            <span><i class="fas fa-memory mr-1"></i><span x-text="vm.memory"></span>MB</span>
+                                            <span><i class="fas fa-microchip mr-1"></i><span x-text="vm.cpus"></span> CPU(s)</span>
+                                            <span><i class="fas fa-hdd mr-1"></i><span x-text="vm.disk_size"></span>GB</span>
+                                            <span x-show="vm.ip_address"><i class="fas fa-network-wired mr-1"></i><span x-text="vm.ip_address"></span></span>
+                                        </div>
+                                        <p class="text-xs text-gray-400 mt-1">
+                                            Created <span x-text="formatDate(vm.created_at)"></span>
+                                        </p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <!-- Action buttons -->
+                                    <button x-show="vm.status === 'stopped' || vm.status === 'created'" 
+                                            @click="startVM(vm.id)"
+                                            :disabled="actionLoading"
+                                            class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-green-600 hover:bg-green-700 disabled:opacity-50">
+                                        <i class="fas fa-play mr-1"></i>
+                                        Start
+                                    </button>
+                                    
+                                    <button x-show="vm.status === 'running'" 
+                                            @click="stopVM(vm.id)"
+                                            :disabled="actionLoading"
+                                            class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-yellow-600 hover:bg-yellow-700 disabled:opacity-50">
+                                        <i class="fas fa-stop mr-1"></i>
+                                        Stop
+                                    </button>
+                                    
+                                    <button @click="viewVM(vm.id)"
+                                            class="inline-flex items-center px-3 py-2 border border-gray-300 text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                                        <i class="fas fa-eye mr-1"></i>
+                                        View
+                                    </button>
+                                    
+                                    <button @click="deleteVM(vm.id)" 
+                                            :disabled="actionLoading"
+                                            class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-red-600 hover:bg-red-700 disabled:opacity-50">
+                                        <i class="fas fa-trash mr-1"></i>
+                                        Delete
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </li>
+                </template>
+            </ul>
+            
+            <div x-show="!loading && vms.length === 0" class="text-center py-12">
+                <i class="fas fa-server text-gray-300 text-4xl mb-4"></i>
+                <p class="text-gray-500 text-lg mb-4">No virtual machines found</p>
+                <a href="/vms/new" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-orange-600 bg-orange-100 hover:bg-orange-200">
+                    <i class="fas fa-plus mr-2"></i>
+                    Create your first VM
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function vmsPage() {
+    return {
+        vms: [],
+        loading: true,
+        actionLoading: false,
+        
+        async init() {
+            await this.loadVMs();
+        },
+        
+        async loadVMs() {
+            try {
+                this.loading = true;
+                const response = await fetch('/api/v1/vms');
+                const data = await response.json();
+                this.vms = data || [];
+            } catch (error) {
+                console.error('Failed to load VMs:', error);
+                showToast('Failed to load VMs', 'error');
+            } finally {
+                this.loading = false;
+            }
+        },
+        
+        async startVM(vmId) {
+            try {
+                this.actionLoading = true;
+                const response = await fetch(`/api/v1/vms/${vmId}/start`, {
+                    method: 'POST'
+                });
+                
+                if (response.ok) {
+                    showToast('VM started successfully', 'success');
+                    await this.loadVMs();
+                } else {
+                    const error = await response.text();
+                    showToast(`Failed to start VM: ${error}`, 'error');
+                }
+            } catch (error) {
+                console.error('Failed to start VM:', error);
+                showToast('Failed to start VM', 'error');
+            } finally {
+                this.actionLoading = false;
+            }
+        },
+        
+        async stopVM(vmId) {
+            try {
+                this.actionLoading = true;
+                const response = await fetch(`/api/v1/vms/${vmId}/stop`, {
+                    method: 'POST'
+                });
+                
+                if (response.ok) {
+                    showToast('VM stopped successfully', 'success');
+                    await this.loadVMs();
+                } else {
+                    const error = await response.text();
+                    showToast(`Failed to stop VM: ${error}`, 'error');
+                }
+            } catch (error) {
+                console.error('Failed to stop VM:', error);
+                showToast('Failed to stop VM', 'error');
+            } finally {
+                this.actionLoading = false;
+            }
+        },
+        
+        async deleteVM(vmId) {
+            if (!confirm('Are you sure you want to delete this VM? This action cannot be undone.')) {
+                return;
+            }
+            
+            try {
+                this.actionLoading = true;
+                const response = await fetch(`/api/v1/vms/${vmId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    showToast('VM deleted successfully', 'success');
+                    await this.loadVMs();
+                } else {
+                    const error = await response.text();
+                    showToast(`Failed to delete VM: ${error}`, 'error');
+                }
+            } catch (error) {
+                console.error('Failed to delete VM:', error);
+                showToast('Failed to delete VM', 'error');
+            } finally {
+                this.actionLoading = false;
+            }
+        },
+        
+        viewVM(vmId) {
+            window.location.href = `/vms/${vmId}`;
+        },
+        
+        getStatusClass(status) {
+            switch (status) {
+                case 'running':
+                    return 'bg-green-100 text-green-800';
+                case 'stopped':
+                case 'created':
+                    return 'bg-gray-100 text-gray-800';
+                case 'creating':
+                    return 'bg-yellow-100 text-yellow-800';
+                case 'error':
+                    return 'bg-red-100 text-red-800';
+                default:
+                    return 'bg-gray-100 text-gray-800';
+            }
+        },
+        
+        formatDate(dateString) {
+            return new Date(dateString).toLocaleDateString();
+        }
+    }
+}
+</script>
+{{end}}

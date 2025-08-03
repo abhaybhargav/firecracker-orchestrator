@@ -1,0 +1,27 @@
+# Firecracker Orchestrator Configuration Example
+# Copy this file to config.yaml and customize as needed
+
+server:
+  host: "0.0.0.0"
+  port: 8080
+
+database:
+  path: "./orchestrator.db"
+
+firecracker:
+  binary: "/usr/bin/firecracker"
+  kernel_path: "./vm-images/vmlinux.bin"
+  rootfs_path: "./vm-images/rootfs.ext4"
+  socket_dir: "/tmp/firecracker"
+
+networking:
+  bridge_name: "fc-br0"
+  tap_device_base: "fc-tap"
+
+vm_defaults:
+  memory_mb: 512
+  cpus: 1
+  disk_gb: 2
+
+logging:
+  level: "info"

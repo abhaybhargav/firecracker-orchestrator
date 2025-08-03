@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}} - Firecracker Orchestrator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex">
+                    <div class="flex-shrink-0 flex items-center">
+                        <i class="fas fa-fire text-orange-500 text-2xl mr-2"></i>
+                        <h1 class="text-xl font-bold text-gray-900">Firecracker Orchestrator</h1>
+                    </div>
+                    <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
+                        <a href="/" class="{{if eq .Page "dashboard"}}border-orange-500 text-gray-900{{else}}border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700{{end}} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                            <i class="fas fa-tachometer-alt mr-2"></i>Dashboard
+                        </a>
+                        <a href="/vms" class="{{if eq .Page "vms"}}border-orange-500 text-gray-900{{else}}border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700{{end}} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                            <i class="fas fa-server mr-2"></i>Virtual Machines
+                        </a>
+                        <a href="/containers" class="{{if eq .Page "containers"}}border-orange-500 text-gray-900{{else}}border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700{{end}} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                            <i class="fas fa-box mr-2"></i>Containers
+                        </a>
+                    </div>
+                </div>
+                <div class="flex items-center">
+                    <div class="flex items-center space-x-4">
+                        <span id="status-indicator" class="flex items-center">
+                            <div class="w-2 h-2 bg-green-400 rounded-full mr-2"></div>
+                            <span class="text-sm text-gray-600">Online</span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        {{template "content" .}}
+    </main>
+
+    <!-- Toast Notifications -->
+    <div id="toast-container" class="fixed top-4 right-4 z-50 space-y-2">
+        <!-- Toasts will be dynamically added here -->
+    </div>
+
+    <script>
+        // Simple toast notification system
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            const bgColor = {
+                'success': 'bg-green-500',
+                'error': 'bg-red-500',
+                'warning': 'bg-yellow-500',
+                'info': 'bg-blue-500'
+            }[type] || 'bg-blue-500';
+            
+            toast.className = `${bgColor} text-white px-6 py-3 rounded-lg shadow-lg transform transition-all duration-300 translate-x-full opacity-0`;
+            toast.textContent = message;
+            
+            container.appendChild(toast);
+            
+            // Animate in
+            setTimeout(() => {
+                toast.classList.remove('translate-x-full', 'opacity-0');
+            }, 100);
+            
+            // Auto remove after 5 seconds
+            setTimeout(() => {
+                toast.classList.add('translate-x-full', 'opacity-0');
+                setTimeout(() => {
+                    if (toast.parentNode) {
+                        toast.parentNode.removeChild(toast);
+                    }
+                }, 300);
+            }, 5000);
+        }
+
+        // Auto-refresh functionality
+        function setupAutoRefresh() {
+            setInterval(() => {
+                if (window.location.pathname !== '/') {
+                    return; // Only auto-refresh dashboard
+                }
+                
+                fetch('/api/v1/status')
+                    .then(response => response.json())
+                    .then(data => {
+                        // Update status indicator
+                        const indicator = document.getElementById('status-indicator');
+                        const dot = indicator.querySelector('div');
+                        const text = indicator.querySelector('span');
+                        
+                        if (data.healthy) {
+                            dot.className = 'w-2 h-2 bg-green-400 rounded-full mr-2';
+                            text.textContent = 'Online';
+                        } else {
+                            dot.className = 'w-2 h-2 bg-red-400 rounded-full mr-2';
+                            text.textContent = 'Offline';
+                        }
+                    })
+                    .catch(() => {
+                        const indicator = document.getElementById('status-indicator');
+                        const dot = indicator.querySelector('div');
+                        const text = indicator.querySelector('span');
+                        dot.className = 'w-2 h-2 bg-red-400 rounded-full mr-2';
+                        text.textContent = 'Offline';
+                    });
+            }, 30000); // Every 30 seconds
+        }
+
+        // Initialize auto-refresh on page load
+        document.addEventListener('DOMContentLoaded', setupAutoRefresh);
+    </script>
+</body>
+</html>
